@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Java
+Bundle-SymbolicName: com.digiarea.fxml.java
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: DAGXP
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Require-Bundle: com.digiarea.fxml;bundle-version="1.0.0",
+ com.dagxp.lmm.jse;bundle-version="1.0.0",
+ com.dagxp.common;bundle-version="1.0.0"
+Export-Package: com.digiarea.fxml.java
