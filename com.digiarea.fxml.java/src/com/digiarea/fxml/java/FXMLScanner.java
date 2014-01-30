@@ -1,8 +1,6 @@
 package com.digiarea.fxml.java;
 
-import com.dagxp.core.utils.StringUtils;
-import com.dagxp.lmm.jse.ClassOrInterfaceType;
-import com.dagxp.lmm.jse.utils.NodeUtils;
+import com.digiarea.common.utils.StringUtils;
 import com.digiarea.fxml.Element;
 import com.digiarea.fxml.Fxml;
 import com.digiarea.fxml.IncludeElement;
@@ -11,6 +9,8 @@ import com.digiarea.fxml.Node;
 import com.digiarea.fxml.PropertyElement;
 import com.digiarea.fxml.ValueElement;
 import com.digiarea.fxml.visitor.VoidVisitorAdapter;
+import com.digiarea.jse.ClassOrInterfaceType;
+import com.digiarea.jse.NodeFacade;
 
 public class FXMLScanner extends VoidVisitorAdapter<Context> {
 
@@ -20,7 +20,7 @@ public class FXMLScanner extends VoidVisitorAdapter<Context> {
 			ValueElement root = (ValueElement) n.getRoot();
 			String name = n.getName() + ".fxml";
 			ctx.putController(name, root.getController());
-			ClassOrInterfaceType type = NodeUtils.toClassOrInterfaceType(root
+			ClassOrInterfaceType type = NodeFacade.ClassOrInterfaceType(root
 					.getName());
 			ctx.putFactory(name, type);
 		}

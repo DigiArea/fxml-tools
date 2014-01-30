@@ -8,58 +8,45 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.dagxp.core.utils.StringUtils;
-import com.dagxp.lmm.jse.AssignExpr;
-import com.dagxp.lmm.jse.AssignExpr.AssignOperator;
-import com.dagxp.lmm.jse.BlockStmt;
-import com.dagxp.lmm.jse.CastExpr;
-import com.dagxp.lmm.jse.ClassExpr;
-import com.dagxp.lmm.jse.ClassOrInterfaceType;
-import com.dagxp.lmm.jse.CompilationUnit;
-import com.dagxp.lmm.jse.DoubleLiteralExpr;
-import com.dagxp.lmm.jse.EnclosedExpr;
-import com.dagxp.lmm.jse.Expression;
-import com.dagxp.lmm.jse.ExpressionStmt;
-import com.dagxp.lmm.jse.FieldAccessExpr;
-import com.dagxp.lmm.jse.ImportDeclaration;
-import com.dagxp.lmm.jse.MethodCallExpr;
-import com.dagxp.lmm.jse.MethodDeclaration;
-import com.dagxp.lmm.jse.ModifierSet;
-import com.dagxp.lmm.jse.NameExpr;
-import com.dagxp.lmm.jse.Node;
-import com.dagxp.lmm.jse.NullLiteralExpr;
-import com.dagxp.lmm.jse.ObjectCreationExpr;
-import com.dagxp.lmm.jse.QualifiedNameExpr;
-import com.dagxp.lmm.jse.ReturnStmt;
-import com.dagxp.lmm.jse.Statement;
-import com.dagxp.lmm.jse.StatementList;
-import com.dagxp.lmm.jse.StringLiteralExpr;
-import com.dagxp.lmm.jse.builder.ModelHierarchy;
-import com.dagxp.lmm.jse.builder.ModelUpdater;
-import com.dagxp.lmm.jse.utils.NodeUtils;
+import com.digiarea.common.utils.StringUtils;
 import com.digiarea.fxml.Attribute;
+import com.digiarea.fxml.Attribute.AttributeType;
 import com.digiarea.fxml.Comment;
 import com.digiarea.fxml.CopyElement;
 import com.digiarea.fxml.DefineElement;
 import com.digiarea.fxml.Element;
 import com.digiarea.fxml.Fxml;
 import com.digiarea.fxml.ImportProcessing;
+import com.digiarea.fxml.ImportProcessing.ImportType;
 import com.digiarea.fxml.IncludeElement;
 import com.digiarea.fxml.InstanceDeclarationElement;
 import com.digiarea.fxml.LanguageProcessing;
 import com.digiarea.fxml.ProcessingInstruction;
 import com.digiarea.fxml.PropertyElement;
+import com.digiarea.fxml.PropertyElement.PropertyType;
 import com.digiarea.fxml.ReferenceElement;
 import com.digiarea.fxml.RootElement;
 import com.digiarea.fxml.ScriptElement;
 import com.digiarea.fxml.UknownStaticPropertyElement;
 import com.digiarea.fxml.UknownTypeElement;
 import com.digiarea.fxml.ValueElement;
-import com.digiarea.fxml.Attribute.AttributeType;
-import com.digiarea.fxml.ImportProcessing.ImportType;
-import com.digiarea.fxml.PropertyElement.PropertyType;
 import com.digiarea.fxml.parser.Constants;
 import com.digiarea.fxml.visitor.GenericVisitor;
+import com.digiarea.jse.AssignExpr.AssignOperator;
+import com.digiarea.jse.ClassOrInterfaceType;
+import com.digiarea.jse.CompilationUnit;
+import com.digiarea.jse.Expression;
+import com.digiarea.jse.ImportDeclaration;
+import com.digiarea.jse.MethodDeclaration;
+import com.digiarea.jse.Modifiers;
+import com.digiarea.jse.Node;
+import com.digiarea.jse.NodeFacade;
+import com.digiarea.jse.NodeList;
+import com.digiarea.jse.QualifiedNameExpr;
+import com.digiarea.jse.Statement;
+import com.digiarea.jse.builder.ModelHierarchy;
+import com.digiarea.jse.builder.ModelUpdater;
+import com.digiarea.jse.utils.NodeUtils;
 
 public class FXML2JFX implements GenericVisitor<Node, Context> {
 
@@ -107,7 +94,7 @@ public class FXML2JFX implements GenericVisitor<Node, Context> {
 			List<ImportDeclaration> imports = cu.getImports();
 			if (imports == null) {
 				imports = new ArrayList<>();
-				cu.setImports(imports);
+				cu.setImports(NodeFacade.NodeList(imports));
 			}
 			return imports;
 		} else {
@@ -130,60 +117,49 @@ public class FXML2JFX implements GenericVisitor<Node, Context> {
 		if (name.startsWith("max") || name.startsWith("min")
 				|| name.startsWith("pref")) {
 			if (value.equals("-Infinity")) {
-				return new FieldAccessExpr(
-						NodeUtils.createNameExpr(JAVAFX_CONTROL),
+				return NodeFacade.FieldAccessExpr(JAVAFX_CONTROL,
 						"USE_PREF_SIZE");
 			} else if (value.equals("-1.0")) {
-				return new FieldAccessExpr(
-						NodeUtils.createNameExpr(JAVAFX_CONTROL),
+				return NodeFacade.FieldAccessExpr(JAVAFX_CONTROL,
 						"USE_COMPUTED_SIZE");
 			} else {
-				return new NameExpr(value);
+				return NodeFacade.NameExpr(value);
 			}
 		} else if (name.equals(Constants.ID_ATTRIBUTE)) {
-			return new StringLiteralExpr(value);
+			return NodeFacade.StringLiteralExpr(value);
 		} else if (value.startsWith("%")) {
-			Expression arg = new StringLiteralExpr(value.substring(1));
-			return new MethodCallExpr(new NameExpr(BUNDLE), GET_STRING,
-					Arrays.asList(arg));
+			Expression arg = NodeFacade.StringLiteralExpr(value.substring(1));
+			return NodeFacade.MethodCallExpr(NodeFacade.NameExpr(BUNDLE), null,
+					GET_STRING, Arrays.asList(arg));
 		} else if (value.startsWith("@")) {
-			return new StringLiteralExpr(
-					normilize(ctx.getFxController(), value));
+			return NodeFacade.StringLiteralExpr(normilize(
+					ctx.getFxController(), value));
 		} else if (name.equals("text")) {
-			return new StringLiteralExpr(value);
+			return NodeFacade.StringLiteralExpr(value);
 		} else if (isContentDisplay(name, value)) {
-			return new FieldAccessExpr(
-					NodeUtils.createNameExpr(JAVAFX_CONTENT_DISPLAY), value);
+			return NodeFacade.FieldAccessExpr(JAVAFX_CONTENT_DISPLAY, value);
 		} else if (isPriority(name, value)) {
-			return new FieldAccessExpr(
-					NodeUtils.createNameExpr(JAVAFX_SCENE_LAYOUT_PRIORITY),
+			return NodeFacade.FieldAccessExpr(JAVAFX_SCENE_LAYOUT_PRIORITY,
 					value);
 		} else if (isTabClosingPolicy(name, value)) {
-			return new FieldAccessExpr(
-					NodeUtils.createNameExpr(JAVAFX_TAB_CLOSING_POLICY), value);
+			return NodeFacade.FieldAccessExpr(JAVAFX_TAB_CLOSING_POLICY, value);
 		} else if (isTextAlignment(name, value)) {
-			return new FieldAccessExpr(
-					NodeUtils.createNameExpr(JAVAFX_TEXT_ALIGNMENT), value);
+			return NodeFacade.FieldAccessExpr(JAVAFX_TEXT_ALIGNMENT, value);
 		} else if (isVPos(name, value)) {
-			return new FieldAccessExpr(
-					NodeUtils.createNameExpr(JAVAFX_GEOMETRY_V_POS), value);
+			return NodeFacade.FieldAccessExpr(JAVAFX_GEOMETRY_V_POS, value);
 		} else if (isHPos(name, value)) {
-			return new FieldAccessExpr(
-					NodeUtils.createNameExpr(JAVAFX_GEOMETRY_H_POS), value);
+			return NodeFacade.FieldAccessExpr(JAVAFX_GEOMETRY_H_POS, value);
 		} else if (isPosition(name, value)) {
-			return new FieldAccessExpr(
-					NodeUtils.createNameExpr(JAVAFX_GEOMETRY_POS), value);
+			return NodeFacade.FieldAccessExpr(JAVAFX_GEOMETRY_POS, value);
 		} else if (isOverrunStyle(name, value)) {
-			return new FieldAccessExpr(
-					NodeUtils.createNameExpr(JAVAFX_OVERRUN_STYLE), value);
+			return NodeFacade.FieldAccessExpr(JAVAFX_OVERRUN_STYLE, value);
 		} else if (isSide(name, value)) {
-			return new FieldAccessExpr(
-					NodeUtils.createNameExpr(JAVAFX_GEOMETRY_SIDE), value);
+			return NodeFacade.FieldAccessExpr(JAVAFX_GEOMETRY_SIDE, value);
 		} else {
 			if (value.startsWith("$")) {
-				return new NameExpr(value.substring(1));
+				return NodeFacade.NameExpr(value.substring(1));
 			}
-			return new NameExpr(value);
+			return NodeFacade.NameExpr(value);
 		}
 	}
 
@@ -287,20 +263,21 @@ public class FXML2JFX implements GenericVisitor<Node, Context> {
 	@Override
 	public Node visit(Attribute n, Context ctx) throws Exception {
 		String parentIdentifier = ((Element) n.getParent()).getIdentifier();
-		Expression scope = new NameExpr(parentIdentifier);
+		Expression scope = NodeFacade.NameExpr(parentIdentifier);
 		List<Expression> args = new ArrayList<>();
 		AttributeType attributeType = n.getAttributeType();
 		String localName = n.getName();
 		String methodName = getSetterName(localName);
 		if (localName.equals(STYLE_CLASS)) {
-			scope = new MethodCallExpr(scope, "getStyleClass");
-			args.add(new StringLiteralExpr(n.getValue()));
+			scope = NodeFacade.MethodCallExpr(scope, "getStyleClass");
+			args.add(NodeFacade.StringLiteralExpr(n.getValue()));
 			methodName = ADD;
 		} else if (localName.equals("url")) {
-			scope = new MethodCallExpr(null, GET_CLASS);
+			scope = NodeFacade.MethodCallExpr(null, GET_CLASS);
 			Expression arg = resolve(n, ctx);
-			scope = new MethodCallExpr(scope, GET_RESOURCE, Arrays.asList(arg));
-			return new MethodCallExpr(scope, OPEN_STREAM);
+			scope = NodeFacade.MethodCallExpr(scope, null, GET_RESOURCE,
+					Arrays.asList(arg));
+			return NodeFacade.MethodCallExpr(scope, OPEN_STREAM);
 		} else if (attributeType == AttributeType.EVENT_HANDLER) {
 			args.add(FXMLUtils.getEventHandler(n.getValue().substring(1)));
 		} else if (attributeType == AttributeType.INSTANCE_PROPERTY) {
@@ -308,12 +285,13 @@ public class FXML2JFX implements GenericVisitor<Node, Context> {
 		} else if (attributeType == AttributeType.STATIC_PROPERTY) {
 			args.add(scope);
 			args.add(resolve(n, ctx));
-			QualifiedNameExpr qName = (QualifiedNameExpr) NodeUtils
-					.createNameExpr(localName);
+			QualifiedNameExpr qName = (QualifiedNameExpr) NodeFacade
+					.QualifiedNameExpr(localName);
 			scope = qName.getQualifier();
 			methodName = getSetterName(qName.getName());
 		}
-		return new ExpressionStmt(new MethodCallExpr(scope, methodName, args));
+		return NodeFacade.ExpressionStmt(NodeFacade.MethodCallExpr(scope, null,
+				methodName, args));
 	}
 
 	@Override
@@ -375,12 +353,13 @@ public class FXML2JFX implements GenericVisitor<Node, Context> {
 			ValueElement root = (ValueElement) n.getRoot();
 			// controller
 			String fxController = root.getController();
-			ClassOrInterfaceType type = NodeUtils.toClassOrInterfaceType(root
+			ClassOrInterfaceType type = NodeFacade.ClassOrInterfaceType(root
 					.getName());
 			if (fxController != null) {
 				ctx.setFxController(fxController);
 				// process the root
-				StatementList list = (StatementList) root.accept(this, ctx);
+				NodeList<Statement> list = (NodeList<Statement>) root.accept(
+						this, ctx);
 				ModelUpdater updater = hierarchy.getUpdater(fxController);
 				if (updater != null) {
 					// process instructions
@@ -399,11 +378,11 @@ public class FXML2JFX implements GenericVisitor<Node, Context> {
 						}
 					}
 					// make method
-					MethodDeclaration method = new MethodDeclaration(
-							ModifierSet.PUBLIC, type, METHOD_NAME);
-					method.setBody(new BlockStmt(list.getStatements()));
-					method.setThrowsList(Arrays.asList(NodeUtils
-							.createNameExpr("java.lang.Exception")));
+					MethodDeclaration method = NodeFacade.MethodDeclaration(
+							Modifiers.PUBLIC, type, METHOD_NAME);
+					method.setBlock(NodeFacade.BlockStmt(list.getNodes()));
+					method.setThrowsList(NodeFacade.NodeList(Arrays.asList(NodeFacade
+							.ClassOrInterfaceType("java.lang.Exception"))));
 					updater.addMember(method);
 					ctx.setFxController(null);
 					return method;
@@ -423,8 +402,8 @@ public class FXML2JFX implements GenericVisitor<Node, Context> {
 	@Override
 	public Node visit(ImportProcessing n, Context ctx) throws Exception {
 		if (!JAVA_LANG.equals(n.getValue())) {
-			return new ImportDeclaration(
-					NodeUtils.createNameExpr(n.getValue()), false,
+			return NodeFacade.ImportDeclaration(
+					NodeFacade.QualifiedNameExpr(n.getValue()), false,
 					n.getImportType() == ImportType.IMPORT_PACKAGE);
 		}
 		return null;
@@ -442,16 +421,15 @@ public class FXML2JFX implements GenericVisitor<Node, Context> {
 		String source = n.getSource();
 		String controller = ctx.getController(source);
 		ClassOrInterfaceType factoryType = ctx.getFactory(source);
-		ClassOrInterfaceType type = NodeUtils
-				.toClassOrInterfaceType(controller);
-		Expression arg = new ClassExpr(type);
-		arg = new MethodCallExpr(NodeUtils.getGetterCall(new NameExpr(
-				MODEL_FACADE), FACTORY, false), CALL, Arrays.asList(arg));
-		arg = new EnclosedExpr(new CastExpr(type, arg));
-		arg = new MethodCallExpr(arg, METHOD_NAME);
-		statements.add(new ExpressionStmt(NodeUtils
-				.createVariableDeclarationExpr(factoryType, n.getIdentifier(),
-						arg)));
+		ClassOrInterfaceType type = NodeFacade.ClassOrInterfaceType(controller);
+		Expression arg = NodeFacade.ClassExpr(type);
+		arg = NodeFacade.MethodCallExpr(NodeUtils.getGetterCall(
+				NodeFacade.NameExpr(MODEL_FACADE), FACTORY, false), null, CALL,
+				Arrays.asList(arg));
+		arg = NodeFacade.EnclosedExpr(NodeFacade.CastExpr(type, arg));
+		arg = NodeFacade.MethodCallExpr(arg, METHOD_NAME);
+		statements.add(NodeFacade.ExpressionStmt(NodeFacade
+				.VariableDeclarationExpr(factoryType, n.getIdentifier(), arg)));
 		if (n.getAttributes() != null) {
 			for (Attribute item : n.getAttributes()) {
 				if (item != null) {
@@ -462,7 +440,7 @@ public class FXML2JFX implements GenericVisitor<Node, Context> {
 				}
 			}
 		}
-		return new StatementList(statements, null);
+		return NodeFacade.NodeList(statements);
 	}
 
 	@Override
@@ -470,19 +448,20 @@ public class FXML2JFX implements GenericVisitor<Node, Context> {
 			throws Exception {
 		List<Statement> statements = new ArrayList<>();
 		String name = n.getName();
-		ClassOrInterfaceType type = NodeUtils.toClassOrInterfaceType(name);
+		ClassOrInterfaceType type = NodeFacade.ClassOrInterfaceType(name);
 		List<Element> elements = n.getElements();
 		boolean hasElements = elements != null && elements.size() > 0;
 		// TODO initialize as a value, constant or factory :)
 		List<Expression> arguments = new ArrayList<>();
-		Expression init = new ObjectCreationExpr(type, arguments);
+		Expression init = NodeFacade.ObjectCreationExpr(type, arguments);
 		String identifier = n.getIdentifier();
 		if (identifier.equals(n.getFxId())) {
-			statements.add(new ExpressionStmt(new AssignExpr(new NameExpr(
-					identifier), init, AssignOperator.assign)));
+			statements.add(NodeFacade.ExpressionStmt(NodeFacade.AssignExpr(
+					NodeFacade.NameExpr(identifier), init,
+					AssignOperator.assign)));
 		} else {
-			statements.add(new ExpressionStmt(NodeUtils
-					.createVariableDeclarationExpr(type, identifier, init)));
+			statements.add(NodeFacade.ExpressionStmt(NodeFacade
+					.VariableDeclarationExpr(type, identifier, init)));
 		}
 		if (n.getAttributes() != null) {
 			if (name.equals("Insets")) {
@@ -506,35 +485,37 @@ public class FXML2JFX implements GenericVisitor<Node, Context> {
 		if (hasElements) {
 			for (Element item : elements) {
 				if (item != null) {
-					StatementList list = (StatementList) item.accept(this, ctx);
+					NodeList<Statement> list = (NodeList<Statement>) item
+							.accept(this, ctx);
 					if (list != null) {
-						statements.addAll(list.getStatements());
+						statements.addAll(list.getNodes());
 					}
 				}
 			}
 		}
 		if (isRoot(n)) {
 			List<Expression> args = new ArrayList<>();
-			args.add(new NullLiteralExpr());
-			args.add(new NameExpr(BUNDLE));
-			statements.add(new ExpressionStmt(new MethodCallExpr(null,
+			args.add(NodeFacade.NullLiteralExpr());
+			args.add(NodeFacade.NameExpr(BUNDLE));
+			statements.add(NodeFacade.ExpressionStmt(NodeFacade.MethodCallExpr(
 					INITIALIZE, args)));
-			statements.add(new ReturnStmt(new NameExpr(identifier)));
+			statements.add(NodeFacade.ReturnStmt(NodeFacade
+					.NameExpr(identifier)));
 		}
-		return new StatementList(statements, null);
+		return NodeFacade.NodeList(statements);
 	}
 
 	private void makeInsets(List<Attribute> attributes,
 			List<Expression> arguments) {
 		// Insets(double top, double right, double bottom, double left)
-		arguments.add(new DoubleLiteralExpr(selectAttribute(attributes, "top",
-				"0.0")));
-		arguments.add(new DoubleLiteralExpr(selectAttribute(attributes,
+		arguments.add(NodeFacade.DoubleLiteralExpr(selectAttribute(attributes,
+				"top", "0.0")));
+		arguments.add(NodeFacade.DoubleLiteralExpr(selectAttribute(attributes,
 				"right", "0.0")));
-		arguments.add(new DoubleLiteralExpr(selectAttribute(attributes,
+		arguments.add(NodeFacade.DoubleLiteralExpr(selectAttribute(attributes,
 				"bottom", "0.0")));
-		arguments.add(new DoubleLiteralExpr(selectAttribute(attributes, "left",
-				"0.0")));
+		arguments.add(NodeFacade.DoubleLiteralExpr(selectAttribute(attributes,
+				"left", "0.0")));
 
 	}
 
@@ -555,7 +536,8 @@ public class FXML2JFX implements GenericVisitor<Node, Context> {
 	}
 
 	@Override
-	public Node visit(com.digiarea.fxml.Project n, Context ctx) throws Exception {
+	public Node visit(com.digiarea.fxml.Project n, Context ctx)
+			throws Exception {
 		if (n.getFxmls() != null) {
 			for (Fxml item : n.getFxmls()) {
 				if (item != null) {
@@ -577,41 +559,47 @@ public class FXML2JFX implements GenericVisitor<Node, Context> {
 			boolean isList = listTypes.containsKey(name);
 			for (Element item : elements) {
 				if (item != null) {
-					StatementList list = (StatementList) item.accept(this, ctx);
+					NodeList<Statement> list = (NodeList<Statement>) item
+							.accept(this, ctx);
 					if (list != null) {
-						Expression arg = new NameExpr(item.getIdentifier());
-						statements.addAll(list.getStatements());
+						Expression arg = NodeFacade.NameExpr(item
+								.getIdentifier());
+						statements.addAll(list.getNodes());
 						if (isList) {
-							statements.add(new ExpressionStmt(
-									new MethodCallExpr(NodeUtils.getGetterCall(
-											new NameExpr(parentIdentifier),
-											name, false), ADD, Arrays
-											.asList(arg))));
+							statements
+									.add(NodeFacade.ExpressionStmt(NodeFacade.MethodCallExpr(
+											NodeUtils.getGetterCall(
+													NodeFacade
+															.NameExpr(parentIdentifier),
+													name, false), null, ADD,
+											Arrays.asList(arg))));
 						} else {
 							if (n.getPropertyType() == PropertyType.STATIC_PROPERTY) {
 								List<Expression> args = new ArrayList<>();
-								args.add(new NameExpr(parentIdentifier));
+								args.add(NodeFacade.NameExpr(parentIdentifier));
 								args.add(arg);
-								QualifiedNameExpr qName = (QualifiedNameExpr) NodeUtils
-										.createNameExpr(name);
+								QualifiedNameExpr qName = (QualifiedNameExpr) NodeFacade
+										.QualifiedNameExpr(name);
 								Expression scope = qName.getQualifier();
 								String methodName = getSetterName(qName
 										.getName());
-								statements.add(new ExpressionStmt(
-										new MethodCallExpr(scope, methodName,
-												args)));
+								statements.add(NodeFacade
+										.ExpressionStmt(NodeFacade
+												.MethodCallExpr(scope, null,
+														methodName, args)));
 							} else {
-								statements.add(new ExpressionStmt(NodeUtils
-										.getSetterCall(new NameExpr(
-												parentIdentifier), n.getName(),
-												arg, false)));
+								statements
+										.add(NodeFacade.ExpressionStmt(NodeUtils.getSetterCall(
+												NodeFacade
+														.NameExpr(parentIdentifier),
+												n.getName(), arg, false)));
 							}
 						}
 					}
 				}
 			}
 		}
-		return new StatementList(statements, null);
+		return NodeFacade.NodeList(statements);
 	}
 
 	@Override

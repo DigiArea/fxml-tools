@@ -2,10 +2,10 @@ package com.digiarea.fxml.java;
 
 import java.util.List;
 
-import com.dagxp.lmm.jse.MethodDeclaration;
-import com.dagxp.lmm.jse.Node;
-import com.dagxp.lmm.jse.arrow.Identity;
-import com.dagxp.lmm.jse.visitor.Context;
+import com.digiarea.jse.MethodDeclaration;
+import com.digiarea.jse.Node;
+import com.digiarea.jse.arrow.Context;
+import com.digiarea.jse.arrow.Identity;
 
 public class ControllerCleaner extends Identity {
 

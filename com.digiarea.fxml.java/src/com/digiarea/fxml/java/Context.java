@@ -5,17 +5,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.dagxp.core.utils.StringUtils;
-import com.dagxp.lmm.jse.ClassOrInterfaceType;
-import com.dagxp.lmm.jse.NameExpr;
-import com.dagxp.lmm.jse.utils.NodeUtils;
+import com.digiarea.common.utils.StringUtils;
+import com.digiarea.jse.ClassOrInterfaceType;
+import com.digiarea.jse.NameExpr;
+import com.digiarea.jse.NodeFacade;
 
 public class Context {
 
 	private List<String> names = new ArrayList<>();
 
 	public String getNewIdentifier(String name) {
-		NameExpr nameExpr = NodeUtils.createNameExpr(name);
+		NameExpr nameExpr = NodeFacade.NameExpr(name);
 		String newId = StringUtils.firstToLower(nameExpr.getName());
 		int i = 1;
 		String tempId = newId;
